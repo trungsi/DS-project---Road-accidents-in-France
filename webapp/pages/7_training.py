@@ -46,7 +46,6 @@ def save_result(model, train_result):
     utils.save_trained_model(train_result, './train_results/' + model)
     
 st.markdown("# Train the model")
-st.sidebar.markdown("# Train the model")
 
 model_list = ['LinearRegression', 'Ridge', 'Lasso', 'DecisionTree', 'RandomForest', 'KNN']
 with st.form('my form'):

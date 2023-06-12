@@ -8,9 +8,6 @@ from utils import utils
 
 st.markdown("# Model v1 generation 🎈")
 
-with st.sidebar:
-    st.divider()
-st.sidebar.markdown("# Model v1 generation 🎈")
 
 button = st.button('Generate regression model')
 if button:
@@ -19,6 +16,8 @@ if button:
     'Load carateristiques files'
     df_carac = utils.read_caracteristiques_files()
     st.write(df_carac.head())
+    utils.save_csv(df_carac.head(), './analysis/caracteristiques_first_5_rows.csv')
+    df_carac.info()
     
     'convert department column to correct format'
     df_carac = utils.cleans_departments(df_carac)
@@ -30,14 +29,17 @@ if button:
     'load usagers files'
     df_usagers = utils.read_usagers_files()
     st.write(df_usagers.head())
+    utils.save_csv(df_usagers.head(), './analysis/usagers_first_5_rows.csv')
     
     'load vehicules files'
     df_vehicules = utils.read_vehicules_files()
     st.write(df_vehicules.head())
+    utils.save_csv(df_vehicules.head(), './analysis/vehicules_first_5_rows.csv')
     
     'load lieux files'
     df_lieux = utils.read_lieux_files()
     st.write(df_lieux.head())
+    utils.save_csv(df_lieux.head(), './analysis/lieux_first_5_rows.csv')
     
     'plot number of accidents by department'
     fig = utils.plot_accident_count_by_departments(df_carac)
