@@ -23,20 +23,26 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 
 import joblib
+from pathlib import Path
 
-
-base_url = "https://github.com/trungsi/DS-project---Road-accidents-in-France/blob/master/"
+base_url = "https://media.githubusercontent.com/media/trungsi/DS-project---Road-accidents-in-France/master/webapp/files/"
 
 # all csv files are uploaded to GitHub
 # They are all merged to create data frames
 # some custom processing due to slight change in the format
-def is_local():
-    return ~('google.colab' in sys.modules)
 
 def get_file_path(prefix, year):
-    if is_local():
-        return './files/' + prefix + str(year) + '.csv'
+    # local with streamlit
+    path = './files/' + prefix + str(year) + '.csv'
+    if (Path(path).exists()):
+        return path
     
+    # local with notebook
+    path = './webapp/files/' + prefix + str(year) + '.csv'
+    if (Path(path).exists()):
+        return path
+    
+    # google colab
     return base_url + prefix + str(year) + '.csv?raw=true'
 
 def read_csv(prefix, year, sep):  
@@ -179,15 +185,17 @@ def plot_severity_by_number_of_pessengers(df_carac):
 def plot_severity_by_atmosphere_condition(df_acc):
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
-    sns.boxplot(data=df_acc, y='grav_mean', x='atm', ax=axes[0])
-    sns.boxplot(data=df_acc, y='grav_total', x='atm', ax=axes[1]);
+    sns.boxplot(data=df_acc, y='grav_total', x='atm', ax=axes[0]);
+    sns.boxplot(data=df_acc, y='grav_mean', x='atm', ax=axes[1])
+
     return fig
 
 def plot_severity_by_collision_type(df_acc):
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
-    sns.boxplot(data=df_acc, y='grav_mean', x='col', ax=axes[0])
-    sns.boxplot(data=df_acc, y='grav_total', x='col', ax=axes[1])
+    sns.boxplot(data=df_acc, y='grav_total', x='col', ax=axes[0])
+    sns.boxplot(data=df_acc, y='grav_mean', x='col', ax=axes[1])
+    
     return fig
 
 def plot_accident_count_by_month_and_year(df_acc):
@@ -220,8 +228,10 @@ def plot_severity_by_road_surface(df_acc):
     ax = sns.boxplot(data=df_acc, y='grav_mean', x='surf');
     return ax.get_figure()
 
-def plot_severity_histogram(df_acc):
-    ax = sns.histplot(df_acc, x='grav_mean', bins=12);
+def plot_severity_histogram(df_acc, x='grav_mean'):
+    plt.figure(figsize=(10, 5))
+    
+    ax = sns.histplot(df_acc, x=x, bins=12);
     return ax.get_figure()
 
 def plot_correlation_heatmap(df_acc):
@@ -275,6 +285,36 @@ def prepare_data_model_v1(df):
     df_prepared = convert_categorical(df_prepared)
 
     return df_prepared
+
+def prepare_data_model_v2(df):
+    # exclude numerical columns and then convert the rest to category type. It greatly helps reduce memory usage.
+    columns = df.columns.drop(['lartpc', 'larrout', 'occutc', 'grav'])
+    df[columns] = df[columns].astype('category')
+    
+    grav_count = df.grav.value_counts(normalize=True)
+    grav_count = grav_count.reset_index().rename(columns={'grav': 'grav_count', 'index': 'grav'})
+    print(grav_count)
+    
+    # dataset is too large for prediction
+    # try to do sampling by keeping sample proportion on gravity
+    df = pd.merge(df, grav_count, on='grav')
+    # is it enough to reduce size by 50%
+    # Still OOM
+    # df = df.sample(frac=0.5, weights='grav_count')
+    # try with 0.3
+    df = df.sample(frac=0.3, weights='grav_count')
+    # class 2 (death) proportion is reduced 10 times after pandas sampling
+    # need to revise sampling technique
+    print(df.grav.value_counts(normalize=True))
+    df = df.drop(columns=['grav_count'])
+
+    # convert categorical variables
+    df = pd.get_dummies(df)
+    
+    # convert target variable for classification
+    df.grav = df.grav.astype('category')
+
+    return df
 
 def train(df, estimator, scaler, target_col='grav_mean'):
     targets = df[target_col]

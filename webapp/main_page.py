@@ -6,7 +6,6 @@ Created on 30 mai 2023
 import streamlit as st
 from utils import utils
 
-'Hello World!!!'
+st.set_page_config(layout="wide")
 
-df_carac = utils.read_caracteristiques_files()
-st.write(df_carac.head())
+'# Prediction on severity of road accidents in France.'

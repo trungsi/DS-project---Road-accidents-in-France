@@ -39,7 +39,8 @@ def set_values_from_existing(df):
 def load_csv():
     df = utils.load_csv('./models/Road accidents - model v1.csv')
     return utils.cleans_data(df)
-     
+
+st.set_page_config(layout="wide")     
 st.markdown("# Testing")
 st.sidebar.markdown("# Testing")
 

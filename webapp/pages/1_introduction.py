@@ -4,7 +4,9 @@ Created on 30 mai 2023
 @author: trand
 '''
 import streamlit as st
+import pandas as pd
 
+st.set_page_config(layout="wide")
 st.sidebar.markdown("# Introduction")
 
 "# Road accidents in France"
@@ -51,10 +53,10 @@ Accident information are composed of 4 files:
     - birth year
     - ...
     
-These files grouped by year are in CSV format and are linked by Num_Acc column.    
+These files grouped by year are in CSV format and are linked by Num_Acc column. Below is the schema of data model
 '''
-
-st.image(image='./csv-files.PNG')
+st.image(image='./data-model.PNG', caption='Data model')
+st.image(image='./csv-files.PNG', caption='CSV files')
 
 '''
 In order to facilitate the processing and also the collaboration, all csv files were downloaded and put into Github repository https://github.com/trungsi/DS-project---Road-accidents-in-France/tree/master/webapp/files.
@@ -70,19 +72,28 @@ All source codes (processing and modeling) are also put in the same Github.
 - date column format is not consistent : year 2006 vs 06 vs 6,...
 '''
 
+'# Data cleansing'
+'''Some columns (eg: long, lat) have a lot of null values. Dropping these rows will drastically reduce the size of data.
+For simplicity, we just exclude these columns from prediction models.
+'''
+
+st.image(image='./analysis/top_null_values.png')
+
+
 '# Modeling'
 '''
 As you can see above, an accident may imply one or several victims with different severity degree. 
 In order to observe the severity of an accident as a whole, we try to extrapolate the severity of each passenger to calculate overall severity (score) with the rule below.
-|Severity Category|Severity Score|
-|Ininjured (1)|0|
-|Slightly injured (4)|3|
-|Injured, in hospital (3)|7|
-|Died (2)|13|
-
+'''
+data = pd.DataFrame([('Ininjured (1)', 0), ('Slightly injured (4)', 3), ('Injured, in hospital (3)', 7), ('Died (2)', 13)], columns=['Severity Category', 'Severity Score'])
+st.table(data=data)
+'''
 Hence to overall severity score of an accident can be the sum of severity score of all victims or the average (mean) score.
-Example: an accident having 4 victims with 4 different severity categories will total score = 23 (0+3+7+13) and mean score = 5,75 (23/4)
-
+'''
+st.subheader('Example: an accident having 4 victims with 4 different severity categories will have')
+st.subheader('total score = 23 (0+3+7+13)')
+st.subheader('and mean score = 5,75 (23/4)')
+'''
 Then the first attempt is to predict the severity score which is a regression problem. 
 As information are aggregated at accident level, information about vehicules (except vehicule count) and passengers (except passengers count) are then ignored. 
 '''
