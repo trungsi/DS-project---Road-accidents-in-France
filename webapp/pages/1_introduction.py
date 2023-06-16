@@ -14,7 +14,7 @@ st.sidebar.markdown("# Introduction")
 '''
 The objective of the project is to predict the severity of road accidents in France.
 
-French gorvement is providing open datasets on road accidents in France from 2005. 
+French gorvement is providing open datasets on road accidents in France from 2006 to 2021. 
 The data is available at this link https://www.data.gouv.fr/en/datasets/bases-de-donnees-annuelles-des-accidents-corporels-de-la-circulation-routiere-annees-de-2005-a-2021/.
 
 A road accident is defined by criteria below:
