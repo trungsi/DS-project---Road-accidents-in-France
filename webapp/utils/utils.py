@@ -20,12 +20,13 @@ import numpy as np
 # from google.colab import drive
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, classification_report, confusion_matrix
+from sklearn.base import is_classifier
 
 import joblib
 from pathlib import Path
 
-base_url = "https://media.githubusercontent.com/media/trungsi/DS-project---Road-accidents-in-France/master/webapp/files/"
+base_url = "https://raw.githubusercontent.com/trungsi/DS-project---Road-accidents-in-France/master/webapp/files/"
 
 # all csv files are uploaded to GitHub
 # They are all merged to create data frames
@@ -286,11 +287,15 @@ def prepare_data_model_v1(df):
 
     return df_prepared
 
-def prepare_data_model_v2(df):
-    # exclude numerical columns and then convert the rest to category type. It greatly helps reduce memory usage.
-    columns = df.columns.drop(['lartpc', 'larrout', 'occutc', 'grav'])
-    df[columns] = df[columns].astype('category')
+def cleans_data_v2(df):
+    # drop columns
+    df = df.drop(columns=['date', 'month', 'nb_jour', 'nb_semaine', 'dep'])
+    df = df.dropna()
+    df = df[df.grav > 0]
     
+    return df
+
+def data_sampling(df, frac):
     grav_count = df.grav.value_counts(normalize=True)
     grav_count = grav_count.reset_index().rename(columns={'grav': 'grav_count', 'index': 'grav'})
     print(grav_count)
@@ -302,21 +307,40 @@ def prepare_data_model_v2(df):
     # Still OOM
     # df = df.sample(frac=0.5, weights='grav_count')
     # try with 0.3
-    df = df.sample(frac=0.3, weights='grav_count')
+    df_sampled = df.sample(frac=frac, weights='grav_count')
     # class 2 (death) proportion is reduced 10 times after pandas sampling
     # need to revise sampling technique
-    print(df.grav.value_counts(normalize=True))
-    df = df.drop(columns=['grav_count'])
+    print(df_sampled.grav.value_counts(normalize=True))
+    df_sampled = df_sampled.drop(columns=['grav_count'])
 
+    return df_sampled
+
+#from imblearn.under_sampling import RandomUnderSampler,  ClusterCentroids
+
+def convert_categorical_v2(df):
     # convert categorical variables
+    # exclude numerical columns and then convert the rest to category type. It greatly helps reduce memory usage.
+    columns = df.columns.drop(['lartpc', 'larrout', 'occutc', 'age', 'grav'])
+    df[columns] = df[columns].astype('category')
     df = pd.get_dummies(df)
+    
+    return df
+
+def prepare_data_model_v2(df):
+    df = cleans_data_v2(df)
+
+    #df = data_sampling(df)
+    
+    df = convert_categorical_v2(df)
     
     # convert target variable for classification
     df.grav = df.grav.astype('category')
 
+    print(len(df.columns), len(df))
+
     return df
 
-def train(df, estimator, scaler, target_col='grav_mean'):
+def train(df, estimator, target_col='grav_mean', scaler=None, sampler=None):
     targets = df[target_col]
     feats = df.drop(columns=[target_col])
 
@@ -329,10 +353,13 @@ def train(df, estimator, scaler, target_col='grav_mean'):
           scaler.fit_transform(feats), 
           columns=feats.columns, 
           index=feats.index)
+      
+    X_train, X_test, y_train, y_test = (
+              train_test_split(feats, targets, test_size=0.2, random_state=123))
 
-    X_train, X_test, y_train, y_test = train_test_split(feats, targets, 
-                                                      test_size=0.2, 
-                                                      random_state=123)
+    if (sampler):
+        X_train, y_train = sampler.fit_resample(X_train, y_train)
+                                                          
     start = time.perf_counter()  
     estimator.fit(X_train, y_train)
     duration = time.perf_counter() - start
@@ -348,9 +375,13 @@ def train(df, estimator, scaler, target_col='grav_mean'):
   
     train_result['y_test_pred'] = y_test_pred
     train_result['y_test'] = y_test
-    train_result['errors'] = y_test_pred - y_test
-  
-    train_result['rmse'] = math.sqrt(mean_squared_error(y_test_pred, y_test))
+
+    if (is_classifier(estimator)):
+      train_result['classification_report'] = classification_report(y_test, y_test_pred)
+      train_result['confusion_matrix'] = confusion_matrix(y_test, y_test_pred)
+    else:
+      train_result['errors'] = y_test_pred - y_test
+      train_result['rmse'] = math.sqrt(mean_squared_error(y_test_pred, y_test))
 
     return train_result
 
@@ -392,6 +423,17 @@ def print_train_result(train_result):
     print('\tSRMSE=', train_result['rmse'])
     print('Train duration=', train_result['train_duration'])
 
+def plot_confusion_matrix(cf_matrix):
+    fig = plt.figure(figsize=(13,13))
+    labels=['1.0', '2.0', '3.0', '4.0']
+    ax = sns.heatmap(cf_matrix, annot=True, fmt='', cmap='Blues')
+    ax.set_xticklabels(labels)
+    ax.set_yticklabels(labels)
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    return fig
+
+
 def save_train_summary(train_result, file):
     summaries = load_json(file) if os.path.exists(file) else []
     copy = train_result.copy()
@@ -400,7 +442,8 @@ def save_train_summary(train_result, file):
     
     copy.pop('y_test_pred')
     copy.pop('y_test')
-    copy.pop('errors')
+    copy.pop('errors', None)
+    copy.pop('confusion_matrix', None)
     
     summaries.append(copy)
     save_json(summaries, file)
