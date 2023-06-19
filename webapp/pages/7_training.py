@@ -14,7 +14,8 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
 
 from sklearn.preprocessing import StandardScaler
-scaler = StandardScaler()
+#scaler = StandardScaler()
+scaler = None
 
 def create_regressor(model):
     if model == 'LinearRegression':
@@ -51,7 +52,7 @@ def train(model, regression=True):
         df = utils.load_csv('./models/Road accidents - model v1.csv')
         df = utils.prepare_data_model_v1(df)
         
-        train_result_slr = utils.train(df, estimator, scaler)
+        train_result_slr = utils.train(df, estimator, target_col='grav_mean', scaler=scaler)
         
     else:
         estimator = create_classifier(model)
@@ -59,7 +60,7 @@ def train(model, regression=True):
         df = utils.load_csv('./models/Road accidents - model v2.csv')
         df = utils.prepare_data_model_v2(df)
         
-        train_result_slr = utils.train(df, estimator, None, target_col='grav')
+        train_result_slr = utils.train(df, estimator, target_col='grav')
         
     return train_result_slr
     

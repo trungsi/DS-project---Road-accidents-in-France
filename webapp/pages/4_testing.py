@@ -84,11 +84,12 @@ with st.form('myform'):
         #st.write(form_values)
         df = pd.DataFrame(data=form_values, index=[0])
         df = utils.convert_categorical(df)
-        df
+        #df
         model = load_model()
         df2 = pd.DataFrame([], columns=model.feature_names_in_)
         df3 = pd.concat([df2, df])
         df3 = df3.fillna(0)
+        #df3
         predicted = model.predict(df3)
         'Predicted value', predicted[0]
         if st.session_state['grav_mean']:
